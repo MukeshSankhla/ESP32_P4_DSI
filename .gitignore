@@ -1,0 +1,38 @@
+# Ignore video/animation asset source folders
+Animations/
+/Animations/
+
+# Python virtual environment & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE & Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Arduino / PlatformIO / Build artifacts
+build/
+.pio/
+*.elf
+*.bin
+*.hex
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+desktop.ini

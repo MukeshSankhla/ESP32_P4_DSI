@@ -1,0 +1,4 @@
+# PC Telemetry Streaming Service Dependencies
+pyserial>=3.5
+psutil>=5.9.0
+pythonnet>=3.0.0; platform_system == "Windows"
