@@ -41,8 +41,7 @@ The repository includes firmware sketches, a suite of Python desktop tools (Sci-
 flowchart TD
     subgraph Host_PC["🖥️ Host PC (Windows)"]
         direction TB
-        LHM["LibreHardwareMonitor / WMI / psutil"] --> TS["telemetry_service.py"]
-        TS --> ST["stream_telemetry.py (115200 Baud)"]
+        LHM["LibreHardwareMonitor / WMI / psutil"] --> ST["stream_telemetry.py (115200 Baud)"]
         VideoFiles["MP4 / AVI / GIF / Images"] --> Studio["mjpeg_converter_studio.py"]
         Studio --> MicroSD["MicroSD Card (FAT32/exFAT)\n/Animations/Vertical/ & /Horizontal/"]
     end
@@ -96,8 +95,7 @@ ESP32_P4_DSI/
 │   │   └── requirements.txt                # opencv-python, pillow, numpy
 │   │
 │   └── pc_telemetry/                       # Real-time PC sensor telemetry stream service
-│       ├── stream_telemetry.py             # Serial telemetry streamer (auto-reconnect, CSV format)
-│       ├── telemetry_service.py            # Hardware sensor reader (LHM, WMI, psutil fallback)
+│       ├── stream_telemetry.py             # Self-contained serial telemetry streamer & sensor reader
 │       ├── LibreHardwareMonitor/           # Pre-compiled LibreHardwareMonitor libraries & DLLs
 │       └── requirements.txt                # pyserial, psutil, pythonnet
 │
@@ -171,17 +169,40 @@ All firmware sketches are located under `firmware/`.
 * **Purpose**: Complete system combining SD card video playback with live PC telemetry HUD overlays.
 * **How it works**: Parses incoming serial telemetry packets from the host PC, blends live sensor readings (CPU/GPU temperature, usage, RAM, clock/date) over background animations, and allows cycling through 15 HUD layouts.
 
-### Flashing Instructions
-1. Open the sketch in **Arduino IDE 2.x** or **VS Code with Arduino/PlatformIO**.
-2. Select Board: **ESP32-P4 Dev Module**.
-3. Ensure ESP32 Arduino Core **v3.0.0 or higher** is installed.
-4. Set Partition Scheme: **Default 4MB with SPIFFS** or **Large SPIFFS**.
-5. Install required Arduino libraries:
-   * `ArduinoJson` (v6.x or v7.x)
-   * `Wire` (built-in)
-   * `SD_MMC` (built-in)
-   * `Preferences` (built-in)
-6. Connect board via USB and click **Upload**.
+### ⚡ Comprehensive Firmware Flashing Guide
+
+Follow these steps to compile and flash the firmware onto your ESP32-P4 board:
+
+#### Step 1: Install Arduino IDE & ESP32 Board Core
+1. Download and install **[Arduino IDE 2.x](https://www.arduino.cc/en/software)**.
+2. Open Arduino IDE and navigate to **File ➔ Preferences**.
+3. In **Additional Board Manager URLs**, add:
+   ```text
+   https://espressif.github.io/arduino-esp32/package_esp32_index.json
+   ```
+4. Go to **Tools ➔ Board ➔ Boards Manager...**, search for **esp32** by *Espressif Systems*, and install **version 3.0.0 or higher** (ESP32-P4 support requires Core 3.0+).
+
+#### Step 2: Install Required Libraries
+Open **Tools ➔ Manage Libraries...** (or `Ctrl+Shift+I`) and install:
+* **ArduinoJson** (v6.x or v7.x by *Benoît Blanchon*)
+* *(Note: `SD_MMC`, `Wire`, `Preferences`, and the MIPI DSI / JPEG hardware drivers are built into the ESP32 core).*
+
+#### Step 3: Configure Board Settings
+1. Open the desired sketch, for example:
+   [`firmware/03_sd_mjpeg_telemetry_hud/03_sd_mjpeg_telemetry_hud.ino`](file:///d:/Codes/P4_DSI/ESP32_P4_DSI/firmware/03_sd_mjpeg_telemetry_hud/03_sd_mjpeg_telemetry_hud.ino)
+2. Under **Tools**, configure the following options:
+   * **Board**: `ESP32-P4 Dev Module` (or your specific board like `DFRobot FireBeetle 2 ESP32-P4`)
+   * **CPU Frequency**: `400MHz (High Performance)`
+   * **Flash Mode**: `QIO 80MHz`
+   * **PSRAM**: `Enabled (OPI PSRAM)`
+   * **Partition Scheme**: `Default 4MB with SPIFFS` (or `16MB Flash / Large SPIFFS` matching your module)
+   * **Port**: Select the corresponding COM port (e.g. `COM13`)
+
+#### Step 4: Upload Firmware
+1. Connect your ESP32-P4 board to your computer via USB-C.
+2. Click the **Upload** button (`Ctrl+U`).
+3. *(Optional)* If the upload does not automatically begin, enter bootloader mode: hold down the **BOOT** button, press and release the **RST** button, then release **BOOT**.
+4. Once flashed, open the **Serial Monitor** at **115200 baud** to view initialization logs and confirm display/SD mounting status.
 
 ---
 
@@ -209,24 +230,40 @@ Double-clicking the control button cycles through 15 distinct HUD layout styles 
 
 ---
 
-## 💾 MicroSD Card Setup
+## 💾 MicroSD Card Setup & Animation Extraction
 
-1. Format your MicroSD card as **FAT32** (or **exFAT**).
-2. Create an `Animations` folder in the root directory with two subfolders: `Horizontal` and `Vertical`.
-3. Copy your converted `.mjpeg` animation files into their respective folders:
+### Step 1: Format the MicroSD Card
+* Use a high-speed MicroSD card (Class 10 / UHS-I / U3 recommended).
+* Format the card as **FAT32** (for cards ≤32GB) or **exFAT** (for cards ≥64GB).
+
+### Step 2: Extract & Copy Animations from `Animation.zip`
+1. Locate your `Animation.zip` (or `Animations.zip`) package.
+2. Unzip/extract the contents on your PC.
+3. On the root of your MicroSD card, create a folder named `Animations`.
+4. Inside the `Animations` folder, create two subfolders: `Horizontal` and `Vertical`.
+5. Copy **ONLY the `.mjpeg` binary files** into the matching subfolders:
+
+> [!IMPORTANT]
+> **Copy ONLY `.mjpeg` files!**
+> Do not copy `.mp4`, `.avi`, `.mov`, `.zip`, `.py`, `.git`, or hidden OS folders (`__MACOSX`, `.DS_Store`, `Thumbs.db`) onto the SD card. The ESP32 hardware JPEG decoder strictly expects binary `.mjpeg` video streams.
 
 ```text
-SD Card Root/
+MicroSD Card Root/
 └── Animations/
     ├── Horizontal/
     │   ├── a1.mjpeg
     │   ├── a2.mjpeg
+    │   ├── a3.mjpeg
     │   └── ...
     └── Vertical/
         ├── a1.mjpeg
         ├── a2.mjpeg
+        ├── a3.mjpeg
         └── ...
 ```
+
+* **Naming Convention**: Files must be named with prefix `a` followed by the clip number (e.g. `a1.mjpeg`, `a2.mjpeg`, `a3.mjpeg` ... up to `a45.mjpeg`).
+* Safely eject the MicroSD card from your PC and insert it into the ESP32-P4 SD card slot.
 
 ---
 
@@ -351,7 +388,3 @@ The single push-button on **GPIO 32** controls all interactive functions:
 </details>
 
 ---
-
-## 📄 License
-
-This project is licensed under the **MIT License** - see the [LICENSE](LICENSE) file for details.
